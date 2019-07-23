@@ -32,7 +32,7 @@ setup(
     long_description_content_type="text/markdown",
     include_package_data=True,
     install_requires=load_requirements("requirements.txt"),
-    tests_require=["pytest"],
+    # tests_require=["pytest"],
     extras_require={"dev": load_requirements("dev-requirements.txt")},
     classifiers=[
         "Development Status :: 5 - Production/Stable",

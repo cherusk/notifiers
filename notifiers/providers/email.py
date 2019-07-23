@@ -1,6 +1,7 @@
 import getpass
 import smtplib
 import socket
+import logging
 from email.message import EmailMessage
 from email.mime.application import MIMEApplication
 from email.utils import formatdate
@@ -14,6 +15,7 @@ DEFAULT_SUBJECT = "New email from 'notifiers'!"
 DEFAULT_FROM = f"{getpass.getuser()}@{socket.getfqdn()}"
 DEFAULT_SMTP_HOST = "localhost"
 
+log = logging.getLogger(__file__)
 
 class SMTP(Provider):
     """Send emails via SMTP"""
@@ -128,12 +130,17 @@ class SMTP(Provider):
 
     def _connect_to_server(self, data: dict):
         self.smtp_server = smtplib.SMTP_SSL if data["ssl"] else smtplib.SMTP
-        self.smtp_server = self.smtp_server(data["host"], data["port"])
+        log.debug('pre smtp client init')
+        self.smtp_server = self.smtp_server()
+        self.smtp_server.set_debuglevel(True)
+        self.smtp_server.connect(data["host"], data["port"])
         self.configuration = self._get_configuration(data)
+        log.debug('pre handshake')
         if data["tls"] and not data["ssl"]:
             self.smtp_server.ehlo()
             self.smtp_server.starttls()
 
+        log.debug('pre auth')
         if data.get("username"):
             self.smtp_server.login(data["username"], data["password"])
 
@@ -145,16 +152,20 @@ class SMTP(Provider):
         errors = None
         try:
             configuration = self._get_configuration(data)
+            log.debug('CNFG - {0}'.format(configuration))
             if (
                 not self.configuration
                 or not self.smtp_server
                 or self.configuration != configuration
             ):
                 self._connect_to_server(data)
+            log.debug('connected')
             email = self._build_email(data)
+            log.debug('mail built')
             if data.get("attachments"):
                 email = self._add_attachments(data, email)
             self.smtp_server.send_message(email)
+            log.debug('mail sent')
         except (
             SMTPServerDisconnected,
             SMTPSenderRefused,
